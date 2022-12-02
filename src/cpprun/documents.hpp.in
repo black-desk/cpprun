@@ -1,0 +1,30 @@
+#pragma once
+
+#include <string_view>
+
+namespace cpprun::documents
+{
+
+using namespace std::literals;
+
+constexpr auto readme = R"(@CPPRUN_READMEMD_CONTENT@)"sv;
+
+constexpr auto features = R"(@CPPRUN_DOCS_FEATURESMD_CONTENT@)"sv;
+
+constexpr auto state = R"(@CPPRUN_DOCS_STATEMD_CONTENT@)"sv;
+
+constexpr auto create = R"(@CPPRUN_DOCS_CREATEMD_CONTENT@)"sv;
+
+constexpr auto start = R"(@CPPRUN_DOCS_STARTMD_CONTENT@)"sv;
+
+constexpr auto kill = R"(@CPPRUN_DOCS_KILLMD_CONTENT@)"sv;
+
+constexpr auto delete_ = R"(@CPPRUN_DOCS_DELETEMD_CONTENT@)"sv;
+
+constexpr auto list = R"(@CPPRUN_DOCS_LISTMD_CONTENT@)"sv;
+
+constexpr auto exec = R"(@CPPRUN_DOCS_EXECMD_CONTENT@)"sv;
+
+constexpr auto run = R"(@CPPRUN_DOCS_RUNMD_CONTENT@)"sv;
+
+}
