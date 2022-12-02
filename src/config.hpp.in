@@ -1,0 +1,14 @@
+#pragma once
+
+#include <string>
+#include <string_view>
+
+namespace cpprun
+{
+static const std::string_view VERSION = "@CMAKE_PROJECT_VERSION@"
+#ifdef CPPRUN_DEBUG
+                                        "_g-@GIT@"
+#endif
+        ;
+
+}
