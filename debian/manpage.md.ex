@@ -7,14 +7,14 @@
 [comment]: # See https://pandoc.org/MANUAL.html#metadata-blocks for details.
 
 [comment]: # pandoc -s -f markdown -t man package.md -o package.1
-[comment]: # 
+[comment]: #
 [comment]: # A manual page package.1 will be generated. You may view the
 [comment]: # manual page with: nroff -man package.1 | less. A typical entry
 [comment]: # in a Makefile or Makefile.am is:
-[comment]: # 
+[comment]: #
 [comment]: # package.1: package.md
 [comment]: #         pandoc --standalone --from=markdown --to=man $< --output=$@
-[comment]: # 
+[comment]: #
 [comment]: # The pandoc binary is found in the pandoc package. Please remember
 [comment]: # that if you create the nroff version in one of the debian/rules
 [comment]: # file targets, such as build, you will need to include pandoc in
