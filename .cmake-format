@@ -3,8 +3,33 @@ format:
   line_width: 100
   dangle_parens: true
 
+always_wrap:
+- add_executable
+- add_library
+- target_compile_definitions
+- target_include_directories
+- target_link_libraries
+- target_sources
+- target_compile_features
+
 parse:
   additional_commands:
+    target_compile_features:
+      pargs: 1
+      kwargs: &targetXXXkwargs
+        PUBLIC: 1
+        PRIVATE: 1
+        INTERFACE: 1
+    target_include_directories:
+      pargs: 1
+      flags:
+      - SYSTEM
+      - BEFORE
+      - AFTER
+      kwargs: *targetXXXkwargs
+    target_link_libraries:
+      pargs: 1
+      kwargs: *targetXXXkwargs
     cpmaddpackage:
       pargs:
         nargs: '*'
