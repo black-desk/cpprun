@@ -1,1 +1,4 @@
-add_executable(cpprun main.cpp)
+add_executable(
+  cpprun
+  main.cpp
+)
