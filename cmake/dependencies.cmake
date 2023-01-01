@@ -46,3 +46,14 @@ CPMAddPackage(
   GITHUB_REPOSITORY Neargye/semver
   GIT_TAG v0.3.0
 )
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(mount REQUIRED mount IMPORTED_TARGET GLOBAL)
+add_library(
+  mount ALIAS PkgConfig::mount
+)
+
+pkg_check_modules(cap REQUIRED libcap IMPORTED_TARGET GLOBAL)
+add_library(
+  cap ALIAS PkgConfig::cap
+)

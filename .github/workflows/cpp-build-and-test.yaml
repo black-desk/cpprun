@@ -28,7 +28,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install clang-tidy
-      run: sudo apt-get install -y clang-tidy
+      run: sudo apt-get install -y clang-tidy libcap-dev
 
     - name: Build "Debug" and test using g++
       run: |
@@ -45,7 +45,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install clang and clang-tidy
-      run: sudo apt-get install -y clang-tidy clang
+      run: sudo apt-get install -y clang-tidy clang libcap-dev
 
     - name: Build "Debug" and test using clang++
       run: |
