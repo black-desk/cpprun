@@ -32,6 +32,8 @@ class Verifyhelper {
         {
                 verify_args(args.begin(), args.end());
         }
+        void verify_annotations_key(const std::string &key) const;
+
         void verify_env_key(const std::string &key) const;
         void verify_env(const std::vector<std::string> &env) const;
         void verify_hook(const std::vector<Config::Hooks::Hook> &hooks) const;
@@ -42,6 +44,7 @@ class Verifyhelper {
         void verify_hostname() const;
         void verify_domainname() const;
         void verify_hooks() const;
+        void verify_annotations() const;
 };
 
 } // namespace cxx_oci_spec

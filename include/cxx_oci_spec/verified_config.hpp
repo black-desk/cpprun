@@ -13,6 +13,7 @@ class VerifyedConfig : public Config {
                 bool stop_when_processes_not_found;
                 bool stop_when_unrecommended_env_detect;
                 bool stop_when_unsupported_version_detected;
+                bool stop_when_unrecommended_keyname_in_annotations_detected;
         };
 
         static constexpr Options DefaultVerifyConfig = Options{
@@ -21,6 +22,8 @@ class VerifyedConfig : public Config {
                 .stop_when_processes_not_found = false,
                 .stop_when_unrecommended_env_detect = false,
                 .stop_when_unsupported_version_detected = false,
+                .stop_when_unrecommended_keyname_in_annotations_detected =
+                        false,
         };
 
         static auto verfiy(const std::filesystem::path &path_to_bundle,

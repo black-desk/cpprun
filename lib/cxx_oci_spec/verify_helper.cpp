@@ -1,5 +1,7 @@
 #include "./verify_helper.hpp"
 
+#include <algorithm>
+#include <regex>
 #include <set>
 #include <type_traits>
 #include <unordered_set>
@@ -29,6 +31,7 @@ void Verifyhelper::verify() const
         verify_hostname();
         verify_domainname();
         verify_hooks();
+        verify_annotations();
 }
 
 void Verifyhelper::verify_mount(const Config::Mount &mount)
@@ -57,9 +60,9 @@ void Verifyhelper::verify_mount(const Config::Mount &mount)
 
         if (mount.options.has_value()) {
                 auto ret = mnt_context_append_options(
-                        mnt_ctx.get(),
-                        black_desk::cpplib::join(mount.options.value(), ",")
-                                .c_str());
+                        mnt_ctx.get(), black_desk::cpplib::strings::join(
+                                               mount.options.value(), ",")
+                                               .c_str());
                 if (ret != 0) {
                         NESTED_EXCEPTION(
                                 "\"options\" invalid: mnt_context_append_options returns {} [mount: {}]",
@@ -214,6 +217,33 @@ void Verifyhelper::verify_hook(
                 if (hook.env.has_value()) {
                         verify_env(hook.env.value());
                 }
+        }
+}
+
+void Verifyhelper::verify_annotations_key(const std::string &key) const
+{
+        auto components = black_desk::cpplib::strings::split(key, '.');
+
+        std::reverse(components.begin(), components.end());
+
+        auto reversed = black_desk::cpplib::strings::join(components, '.');
+
+        // https://regexr.com/3au3g
+        static std::regex regex_match_domain(
+                R"((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9])");
+
+        if (std::regex_match(reversed, regex_match_domain)) {
+                return;
+        }
+
+        auto msg = fmt::format(
+                "Keys in annotations should be named using a reverse domain notation, but we get \"{}\"",
+                key);
+
+        if (option.stop_when_unrecommended_keyname_in_annotations_detected) {
+                NESTED_EXCEPTION("{}", msg);
+        } else {
+                SPDLOG_WARN(msg);
         }
 }
 
@@ -382,7 +412,21 @@ DO_OCI_CONFIG_VERIFY_START(
                 NESTED_EXCEPTION("no hook in \"hooks\"");
         }
 }
-DO_OCI_CONFIG_VERIFY_END(domainname);
+DO_OCI_CONFIG_VERIFY_END(hooks);
+
+DO_OCI_CONFIG_VERIFY_START(
+        annotations,
+        "https://github.com/opencontainers/runtime-spec/blob/main/config.md#annotations");
+{
+        if (!config.annotations.has_value()) {
+                return;
+        }
+
+        for (const auto &[key, value] : config.annotations.value()) {
+                verify_annotations_key(key);
+        }
+}
+DO_OCI_CONFIG_VERIFY_END(hooks);
 
 #undef DO_OCI_CONFIG_VERIFY_START
 #undef DO_OCI_CONFIG_VERIFY_END

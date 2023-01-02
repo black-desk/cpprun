@@ -98,6 +98,7 @@ struct Config {
                         createContainer, startContainer, poststart, poststop;
         };
         std::optional<Hooks> hooks;
+        std::optional<std::map<std::string, nlohmann::json>> annotations;
 
         static auto from(const std::filesystem::path &file)
                 -> std::shared_ptr<Config>;
@@ -129,7 +130,7 @@ JSON_DEFINE(Config::Process, REQUIRED(cwd, args, user),
             OPTIONAL(terminal, consoleSize, rlimits, env, apparmorProfile,
                      capabilities, noNewPrivileges, oomScoreAdj, selinuxLabel));
 JSON_DEFINE(Config, REQUIRED(ociVersion, root),
-            OPTIONAL(mounts, process, hooks));
+            OPTIONAL(mounts, process, hooks, annotations));
 
 #undef JSON_DEFINE
 #undef OPTIONAL

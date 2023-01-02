@@ -200,3 +200,25 @@ TEST(OCIConfig, processDuplicateEnv)
 #pragma GCC diagnostic pop
         }
 }
+
+TEST(OCIConfig, annotations)
+{
+        WITH_CONFIG("minimal-for-start-config");
+        config_json["some_unknow_key"]["some_other_unknow_key"] = "some string";
+        {
+                VERIFY_PASS({});
+        }
+
+        config_json["annotations"]["some_unknow_key"] = "some string";
+        {
+                VERIFY_PASS({});
+        }
+        {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+                VERIFY_FAIL(
+                        { .stop_when_unrecommended_keyname_in_annotations_detected =
+                                  true });
+#pragma GCC diagnostic pop
+        }
+}
