@@ -100,6 +100,108 @@ struct Config {
         std::optional<Hooks> hooks;
         std::optional<std::map<std::string, nlohmann::json>> annotations;
 
+        struct Namespace {
+                std::string type;
+                std::optional<std::filesystem::path> path;
+        };
+
+        std::optional<std::vector<Namespace>> namespaces;
+
+        std::optional<std::vector<LinuxIDMapping>> uidMappings, gidMappings;
+
+        struct Device {
+                std::string type;
+                std::filesystem::path path;
+                std::optional<int64_t> major, minor;
+                std::optional<uint32_t> fileMode, uid, gid;
+        };
+
+        std::optional<std::vector<Device>> devices;
+
+        std::optional<std::filesystem::path> cgroupPath;
+
+        struct Resources {
+                struct Device {
+                        bool allow;
+                        std::optional<std::string> type;
+                        std::optional<int64_t> major, minor;
+                        std::optional<std::string> access;
+                };
+
+                std::optional<std::vector<Device>> devices;
+
+                struct Memory {
+                        std::optional<int64_t> limit, reservation, swap, kernel,
+                                kernelTCP;
+                        std::optional<uint64_t> swappiness;
+                        std::optional<bool> disableOOMKiller, useHierarchy,
+                                checkBeforeUpdate;
+                };
+
+                std::optional<Memory> memory;
+
+                struct CPU {
+                        std::optional<uint64_t> shares, period, realtimePeriod;
+                        std::optional<int64_t> quota, realtimeRuntime, idle;
+                        std::optional<std::string> cpus, mems;
+                };
+
+                std::optional<CPU> cpu;
+
+                struct BlockIO {
+                        std::optional<uint16_t> weight, leafWeight;
+
+                        struct WeightDevice {
+                                int64_t major, minor;
+                                std::optional<uint16_t> weight, leafWeight;
+                        };
+
+                        std::optional<std::vector<WeightDevice>> weightDevice;
+
+                        struct ThrottleDevice {
+                                int64_t major, minor;
+                                uint64_t rate;
+                        };
+
+                        std::optional<std::vector<ThrottleDevice>>
+                                throttleReadBpsDevice, throttleWriteBpsDevice;
+                };
+
+                std::optional<BlockIO> blockIO;
+
+                struct HugepageLimit {
+                        std::string pageSize;
+                        uint64_t limit;
+                };
+
+                std::optional<std::vector<HugepageLimit>> hugepageLimits;
+
+                struct Network {
+                        std::optional<uint32_t> classID;
+                        struct Priority {
+                                std::string name;
+                                uint32_t priority;
+                        };
+                        std::optional<std::vector<Priority>> priorities;
+                };
+
+                std::optional<Network> network;
+
+                struct PIDs {
+                        int64_t limit;
+                };
+
+                std::optional<PIDs> pids;
+
+                struct RDMA {
+                        std::optional<uint32_t> hcaHanles, hcaObjects;
+                };
+
+                std::optional<RDMA> rdma;
+        };
+
+        std::optional<Resources> resources;
+
         static auto from(const std::filesystem::path &file)
                 -> std::shared_ptr<Config>;
 
@@ -129,8 +231,33 @@ JSON_DEFINE_OPTIONAL(Config::Hooks, prestart, createRuntime, createContainer,
 JSON_DEFINE(Config::Process, REQUIRED(cwd, args, user),
             OPTIONAL(terminal, consoleSize, rlimits, env, apparmorProfile,
                      capabilities, noNewPrivileges, oomScoreAdj, selinuxLabel));
+JSON_DEFINE(Config::Namespace, REQUIRED(type), OPTIONAL(path));
+JSON_DEFINE(Config::Device, REQUIRED(type, path),
+            OPTIONAL(major, minor, fileMode, uid, gid));
+JSON_DEFINE(Config::Resources::Device, REQUIRED(allow),
+            OPTIONAL(type, major, minor, access));
+JSON_DEFINE_OPTIONAL(Config::Resources::Memory, limit, reservation, swap,
+                     kernel, kernelTCP, swappiness, disableOOMKiller,
+                     useHierarchy, checkBeforeUpdate);
+JSON_DEFINE_OPTIONAL(Config::Resources::CPU, shares, period, realtimePeriod,
+                     quota, realtimeRuntime, idle, cpus, mems);
+JSON_DEFINE(Config::Resources::BlockIO::WeightDevice, REQUIRED(major, minor),
+            OPTIONAL(weight, leafWeight));
+JSON_DEFINE_REQUIRED(Config::Resources::BlockIO::ThrottleDevice, major, minor,
+                     rate);
+JSON_DEFINE_OPTIONAL(Config::Resources::BlockIO, weight, leafWeight,
+                     weightDevice, throttleReadBpsDevice,
+                     throttleWriteBpsDevice);
+JSON_DEFINE_REQUIRED(Config::Resources::HugepageLimit, pageSize, limit);
+JSON_DEFINE_REQUIRED(Config::Resources::Network::Priority, name, priority);
+JSON_DEFINE_OPTIONAL(Config::Resources::Network, classID, priorities);
+JSON_DEFINE_REQUIRED(Config::Resources::PIDs, limit);
+JSON_DEFINE_OPTIONAL(Config::Resources::RDMA, hcaHanles, hcaObjects);
+JSON_DEFINE_OPTIONAL(Config::Resources, devices, memory, cpu, blockIO,
+                     hugepageLimits, network, pids, rdma);
 JSON_DEFINE(Config, REQUIRED(ociVersion, root),
-            OPTIONAL(mounts, process, hooks, annotations));
+            OPTIONAL(mounts, process, hooks, annotations, namespaces,
+                     uidMappings, gidMappings, devices, resources));
 
 #undef JSON_DEFINE
 #undef OPTIONAL
