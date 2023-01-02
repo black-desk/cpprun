@@ -15,15 +15,17 @@
                 << "json parse failed";
 
 // NOLINTNEXTLINE
-#define VERIFY_PASS(opt)                                                        \
-        cxx_oci_spec::Config config;                                            \
-        config_json.get_to(config);                                             \
-        std::shared_ptr<cxx_oci_spec::VerifyedConfig> verified_config;          \
-        ASSERT_NO_THROW(/*NOLINT*/                                              \
-                        verified_config = cxx_oci_spec::VerifyedConfig::verfiy( \
-                                data_path(), config,                            \
-                                cxx_oci_spec::VerifyedConfig::Options opt););   \
-        ASSERT_NE(verified_config, nullptr)                                     \
+#define VERIFY_PASS(...)                                                      \
+        cxx_oci_spec::Config config;                                          \
+        config_json.get_to(config);                                           \
+        std::shared_ptr<cxx_oci_spec::VerifyedConfig> verified_config;        \
+        ASSERT_NO_THROW(/*NOLINT*/                                            \
+                        verified_config =                                     \
+                                cxx_oci_spec::VerifyedConfig::verfiy(         \
+                                        data_path(), config,                  \
+                                        cxx_oci_spec::VerifyedConfig::Options \
+                                                __VA_ARGS__););               \
+        ASSERT_NE(verified_config, nullptr)                                   \
                 << "verified_config should never be nullptr";
 
 // NOLINTNEXTLINE
@@ -220,5 +222,30 @@ TEST(OCIConfig, annotations)
                         { .stop_when_unrecommended_keyname_in_annotations_detected =
                                   true });
 #pragma GCC diagnostic pop
+        }
+}
+
+TEST(OCIConfig, example)
+{
+        WITH_CONFIG("example");
+        {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+                VERIFY_PASS({
+                        .continue_when_unsupported_feature_found = true,
+                });
+#pragma GCC diagnostic pop
+        }
+        {
+                VERIFY_PASS({
+                        .continue_when_unsupported_feature_found = true,
+                        .stop_when_duplicate_key_found_in_environ = true,
+                        .stop_when_no_hook_found_in_hooks = true,
+                        .stop_when_processes_not_found = true,
+                        .stop_when_unrecommended_env_detect = true,
+                        .stop_when_unsupported_version_detected = true,
+                        .stop_when_unrecommended_keyname_in_annotations_detected =
+                                true,
+                });
         }
 }

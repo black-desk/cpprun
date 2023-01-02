@@ -21,7 +21,7 @@ class Verifyhelper {
 
         void verify() const;
 
-        static void verify_mount(const Config::Mount &mount);
+        void verify_mount(const Config::Mount &mount) const;
         static void verify_rlimits(decltype(Config::process->rlimits) &rlimits);
         static void verify_capabilities(
                 decltype(Config::process->capabilities) &capabilities);

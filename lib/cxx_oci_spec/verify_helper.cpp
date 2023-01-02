@@ -15,6 +15,18 @@
 #include "rlimits.hpp"
 namespace cxx_oci_spec
 {
+// NOLINTNEXTLINE
+#define WARNING_OR_EXCEPTION(opt, ...)         \
+        if (!(opt)) {                          \
+                SPDLOG_WARN(__VA_ARGS__);      \
+        } else {                               \
+                NESTED_EXCEPTION(__VA_ARGS__); \
+        }
+
+// NOLINTNEXTLINE
+#define UNSUPPORTED(...)                                                      \
+        WARNING_OR_EXCEPTION(!option.continue_when_unsupported_feature_found, \
+                             __VA_ARGS__)
 
 #ifdef CXX_OCI_SPEC_PRECHECK
 constexpr static const auto mount_context_deleter =
@@ -34,7 +46,7 @@ void Verifyhelper::verify() const
         verify_annotations();
 }
 
-void Verifyhelper::verify_mount(const Config::Mount &mount)
+void Verifyhelper::verify_mount(const Config::Mount &mount) const
 {
         if (mount.destination.is_relative()) {
                 NESTED_EXCEPTION(
@@ -81,13 +93,13 @@ void Verifyhelper::verify_mount(const Config::Mount &mount)
         }
 
         if (mount.uidMappings.has_value()) {
-                NESTED_EXCEPTION("\"uidMappings\" not supported [mount: {}]",
-                                 JSON(mount));
+                UNSUPPORTED("\"uidMappings\" not supported [mount: {}]",
+                            JSON(mount));
         }
 
         if (mount.gidMappings.has_value()) {
-                NESTED_EXCEPTION("\"gidMappings\" not supported [mount: {}]",
-                                 JSON(mount));
+                UNSUPPORTED("\"gidMappings\" not supported [mount: {}]",
+                            JSON(mount));
         }
 #endif
 }
@@ -159,9 +171,10 @@ void Verifyhelper::verify_args(
 void Verifyhelper::verify_env_key(const std::string &key) const
 {
         for (const auto &character : key) {
-                if ((std::isupper(character) == 0) && character != '_') {
+                if ((std::isupper(character) == 0) && character != '_' &&
+                    (std::isdigit(character) == 0)) {
                         auto msg = fmt::format(
-                                "environment varliable name SHOULD contain only upper case letter and '_', but we get '{}' in \"{}\"",
+                                "environment varliable name should contain only upper case letters, digits, and '_', but we get '{}' in \"{}\"",
                                 character, key);
                         if (option.stop_when_unrecommended_env_detect) {
                                 NESTED_EXCEPTION("{}", msg);
@@ -204,7 +217,7 @@ void Verifyhelper::verify_hook(
 // FIXME: use decltype
 {
         for (const auto &hook : hooks) {
-                if (hook.path.is_absolute()) {
+                if (!hook.path.is_absolute()) {
                         NESTED_EXCEPTION(
                                 "\"hooks\" invalid: \"path\" should be absolute [hook: {}]",
                                 JSON(hook));
@@ -271,13 +284,8 @@ DO_OCI_CONFIG_VERIFY_START(
         constexpr std::string_view version_range = ">=1.0.0 <1.0.2";
         semver::version config_version(config.ociVersion);
         if (!semver::range::satisfies(config_version, version_range)) {
-                auto msg = fmt::format("oci version {} unsupported:\n{}",
-                                       config.ociVersion);
-                if (option.stop_when_unsupported_version_detected) {
-                        NESTED_EXCEPTION("{}", msg);
-                } else {
-                        SPDLOG_WARN(msg);
-                }
+                UNSUPPORTED("oci version {} unsupported:\n{}",
+                            config.ociVersion);
         }
 }
 DO_OCI_CONFIG_VERIFY_END(ociVersion);
@@ -318,13 +326,9 @@ DO_OCI_CONFIG_VERIFY_START(
         "https://github.com/opencontainers/runtime-spec/blob/main/config.md#process");
 {
         if (!config.process.has_value()) {
-                if (option.stop_when_processes_not_found) {
-                        NESTED_EXCEPTION("\"process\" not found");
-                } else {
-                        SPDLOG_WARN(
-                                "\"process\" not found, this configuration will failed when \"start\" called");
-                        return;
-                }
+                WARNING_OR_EXCEPTION(option.stop_when_processes_not_found,
+                                     "\"process\" not found");
+                return;
         }
 
         if (config.process->args.empty()) {
@@ -342,13 +346,12 @@ DO_OCI_CONFIG_VERIFY_START(
         verify_rlimits(config.process->rlimits);
 
         if (config.process->apparmorProfile.has_value()) {
-                NESTED_EXCEPTION("\"apparmorProfile\" not supported");
         }
 
         verify_capabilities(config.process->capabilities);
 
         if (config.process->selinuxLabel.has_value()) {
-                NESTED_EXCEPTION("\"selinuxLabel\" not supported");
+                UNSUPPORTED("\"selinuxLabel\" not supported");
         }
 }
 DO_OCI_CONFIG_VERIFY_END(process);
@@ -357,8 +360,8 @@ DO_OCI_CONFIG_VERIFY_START(
         hostname,
         "https://github.com/opencontainers/runtime-spec/blob/main/config.md#hostname");
 {
-        if (config.hostname) {
-                NESTED_EXCEPTION("\"hostname\" not supported");
+        if (config.hostname.has_value()) {
+                UNSUPPORTED("\"hostname\" not supported");
         }
 }
 DO_OCI_CONFIG_VERIFY_END(hostname);
@@ -367,8 +370,8 @@ DO_OCI_CONFIG_VERIFY_START(
         domainname,
         "https://github.com/opencontainers/runtime-spec/blob/main/config.md#domainname");
 {
-        if (config.domainname) {
-                NESTED_EXCEPTION("\"domainname\" not supported");
+        if (config.domainname.has_value()) {
+                UNSUPPORTED("\"domainname\" not supported");
         }
 }
 DO_OCI_CONFIG_VERIFY_END(domainname);

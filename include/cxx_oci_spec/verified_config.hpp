@@ -8,6 +8,7 @@ namespace cxx_oci_spec
 class VerifyedConfig : public Config {
     public:
         struct Options {
+                bool continue_when_unsupported_feature_found;
                 bool stop_when_duplicate_key_found_in_environ;
                 bool stop_when_no_hook_found_in_hooks;
                 bool stop_when_processes_not_found;
@@ -17,6 +18,7 @@ class VerifyedConfig : public Config {
         };
 
         static constexpr Options DefaultVerifyConfig = Options{
+                .continue_when_unsupported_feature_found = false,
                 .stop_when_duplicate_key_found_in_environ = false,
                 .stop_when_no_hook_found_in_hooks = false,
                 .stop_when_processes_not_found = false,
