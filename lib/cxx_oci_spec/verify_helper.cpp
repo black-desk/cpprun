@@ -44,6 +44,7 @@ void Verifyhelper::verify() const
         verify_domainname();
         verify_hooks();
         verify_annotations();
+        verify_namespaces();
 }
 
 void Verifyhelper::verify_mount(const Config::Mount &mount) const
@@ -430,6 +431,45 @@ DO_OCI_CONFIG_VERIFY_START(
         }
 }
 DO_OCI_CONFIG_VERIFY_END(hooks);
+
+DO_OCI_CONFIG_VERIFY_START(
+        namespaces,
+        "https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md#namespaces");
+{
+        if (!config.namespaces.has_value()) {
+                return;
+        }
+
+        std::map<std::string, bool> namespaces{
+                { "pid", false },   { "network", false }, { "mount", false },
+                { "ipc", false },   { "uts", false },     { "user", false },
+                { "cgroup", false }
+        };
+
+        for (const auto &namespace_ : config.namespaces.value()) {
+                auto iter = namespaces.find(namespace_.type);
+                if (iter == namespaces.end()) {
+                        NESTED_EXCEPTION("unknown namespace type \"{}\"",
+                                         namespace_.type);
+                }
+
+                if (iter->second) {
+                        NESTED_EXCEPTION(
+                                "\"namespaces\" field contains duplicated namespaces with same \"type\" (\"{}\")",
+                                namespace_.type);
+                }
+
+                iter->second = true;
+
+                if (namespace_.path.has_value() &&
+                    !namespace_.path->is_absolute()) {
+                        NESTED_EXCEPTION(
+                                "\"path\" MUST be an absolute path [\"path\"= \"{}\"]",
+                                namespace_.path->string());
+                }
+        }
+}
+DO_OCI_CONFIG_VERIFY_END(namespaces);
 
 #undef DO_OCI_CONFIG_VERIFY_START
 #undef DO_OCI_CONFIG_VERIFY_END
