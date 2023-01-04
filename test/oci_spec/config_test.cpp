@@ -276,6 +276,16 @@ TEST(OCIConfig, namespaces)
 
         config_json["namespaces"] = R"([
                 {
+                        "type": "unknow ns"
+                }
+        ])"_json;
+        {
+                VERIFY_FAIL({});
+        }
+
+
+        config_json["namespaces"] = R"([
+                {
                         "type": "pid",
                         "path": "/path/to/pid_ns"
                 }
