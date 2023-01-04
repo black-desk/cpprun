@@ -45,6 +45,7 @@ void Verifyhelper::verify() const
         verify_hooks();
         verify_annotations();
         verify_namespaces();
+        verify_devices();
 }
 
 void Verifyhelper::verify_mount(const Config::Mount &mount) const
@@ -470,6 +471,33 @@ DO_OCI_CONFIG_VERIFY_START(
         }
 }
 DO_OCI_CONFIG_VERIFY_END(namespaces);
+
+DO_OCI_CONFIG_VERIFY_START(
+        devices,
+        "https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md#devices");
+{
+        if (!config.devices.has_value()) {
+                return;
+        }
+
+        static const std::set<std::string> types{ "c", "b", "u", "p" };
+
+        for (const auto &device : config.devices.value()) {
+                if (types.find(device.type) == types.end()) {
+                        NESTED_EXCEPTION("unknown device type [deivce: {}]",
+                                         JSON(device));
+                }
+
+                if (!device.path.is_absolute()) {
+                        NESTED_EXCEPTION(
+                                "path of deivce should be absolute [device: {}]",
+                                JSON(device));
+                }
+
+                // TODO(black_desk): Should we check uid and gid is mapped or not?
+        }
+}
+DO_OCI_CONFIG_VERIFY_END(devices);
 
 #undef DO_OCI_CONFIG_VERIFY_START
 #undef DO_OCI_CONFIG_VERIFY_END

@@ -283,7 +283,6 @@ TEST(OCIConfig, namespaces)
                 VERIFY_FAIL({});
         }
 
-
         config_json["namespaces"] = R"([
                 {
                         "type": "pid",
@@ -298,6 +297,46 @@ TEST(OCIConfig, namespaces)
                 {
                         "type": "pid",
                         "path": "path/to/pid_ns"
+                }
+        ])"_json;
+        {
+                VERIFY_FAIL({});
+        }
+}
+
+TEST(OCIConfig, devices)
+{
+        WITH_CONFIG("minimal-for-start-config");
+        config_json["devices"] = R"([
+                {
+                        "type": "b",
+                        "path": "/dev/sda",
+                        "major": 8,
+                        "minor": 0
+                }
+        ])"_json;
+        {
+                VERIFY_PASS({});
+        }
+
+        config_json["devices"] = R"([
+                {
+                        "type": "x",
+                        "path": "/dev/sda",
+                        "major": 8,
+                        "minor": 0
+                }
+        ])"_json;
+        {
+                VERIFY_FAIL({});
+        }
+
+        config_json["devices"] = R"([
+                {
+                        "type": "b",
+                        "path": "dev/sda",
+                        "major": 8,
+                        "minor": 0
                 }
         ])"_json;
         {
