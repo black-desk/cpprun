@@ -46,6 +46,7 @@ void Verifyhelper::verify() const
         verify_annotations();
         verify_namespaces();
         verify_devices();
+        verify_resources();
 }
 
 void Verifyhelper::verify_mount(
@@ -256,6 +257,47 @@ void Verifyhelper::verify_annotations_key(
                 NESTED_EXCEPTION("{}", msg);
         } else {
                 SPDLOG_WARN(msg);
+        }
+}
+
+void Verifyhelper::verify_allowed_device_list(
+        decltype(Config::Resources::devices)::value_type const &devices)
+{
+        for (auto const &device : devices) {
+                try {
+                        verify_allowed_device_list_type(device.type);
+
+                        if (device.access.has_value()) {
+                                verify_allowed_device_list_access(
+                                        device.access.value());
+                        }
+
+                } catch (const std::exception &e) {
+                        NESTED_EXCEPTION("invalid device [{}]", JSON(device));
+                }
+        }
+}
+
+void Verifyhelper::verify_allowed_device_list_type(
+        decltype(decltype(Config::Resources::devices)::value_type::value_type::
+                         type) const &type)
+{
+        static const std::set<std::string> types{ "c", "b", "a" };
+        if (types.find(type) == types.end()) {
+                NESTED_EXCEPTION("invalid type");
+        }
+}
+
+void Verifyhelper::verify_allowed_device_list_access(
+        decltype(decltype(Config::Resources::devices)::value_type::value_type::
+                         access)::value_type const &access)
+{
+        static const std::set<char> accesses{ 'r', 'w', 'm' };
+        for (auto const &character : access) {
+                if (accesses.find(character) == accesses.end() ||
+                    std::count(access.begin(), access.end(), character) != 1) {
+                        NESTED_EXCEPTION("invalid access");
+                }
         }
 }
 
@@ -500,6 +542,20 @@ DO_OCI_CONFIG_VERIFY_START(
         }
 }
 DO_OCI_CONFIG_VERIFY_END(devices);
+
+DO_OCI_CONFIG_VERIFY_START(
+        resources,
+        "https://github.com/opencontainers/runtime-spec/blob/main/config-linux.md#control-groups");
+{
+        if (!config.resources.has_value()) {
+                return;
+        }
+
+        if (config.resources->devices.has_value()) {
+                verify_allowed_device_list(config.resources->devices.value());
+        }
+}
+DO_OCI_CONFIG_VERIFY_END(resources);
 
 #undef DO_OCI_CONFIG_VERIFY_START
 #undef DO_OCI_CONFIG_VERIFY_END

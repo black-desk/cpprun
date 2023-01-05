@@ -64,6 +64,7 @@ class Verifyhelper {
         void verify_annotations() const;
         void verify_namespaces() const;
         void verify_devices() const;
+        void verify_resources() const;
 };
 
 } // namespace cxx_oci_spec
