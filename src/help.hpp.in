@@ -1,0 +1,16 @@
+#pragma once
+
+#include <string>
+
+namespace cpprun
+{
+
+static const std::string_view CREATE_DOC = R"(@CPPRUN_CREATE_DOC@)";
+static const std::string_view DELETE_DOC = R"(@CPPRUN_DELETE_DOC@)";
+static const std::string_view EXEC_DOC = R"(@CPPRUN_EXEC_DOC@)";
+static const std::string_view KILL_DOC = R"(@CPPRUN_KILL_DOC@)";
+static const std::string_view LIST_DOC = R"(@CPPRUN_LIST_DOC@)";
+static const std::string_view START_DOC = R"(@CPPRUN_START_DOC@)";
+static const std::string_view STATE_DOC = R"(@CPPRUN_STATE_DOC@)";
+
+} // namespace cpprun

@@ -1,10 +1,6 @@
 name: Build and test cpp library
 
-on:
-  push:
-    paths:
-      - .github/workflows/*
-      - /**
+on: [push]
 
 jobs:
   format-check:
