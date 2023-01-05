@@ -112,7 +112,7 @@ struct Config {
         struct Device {
                 std::string type;
                 std::filesystem::path path;
-                std::optional<int64_t> major, minor;
+                int64_t major, minor;
                 std::optional<uint32_t> fileMode, uid, gid;
         };
 
@@ -232,8 +232,8 @@ JSON_DEFINE(Config::Process, REQUIRED(cwd, args, user),
             OPTIONAL(terminal, consoleSize, rlimits, env, apparmorProfile,
                      capabilities, noNewPrivileges, oomScoreAdj, selinuxLabel));
 JSON_DEFINE(Config::Namespace, REQUIRED(type), OPTIONAL(path));
-JSON_DEFINE(Config::Device, REQUIRED(type, path),
-            OPTIONAL(major, minor, fileMode, uid, gid));
+JSON_DEFINE(Config::Device, REQUIRED(type, path, major, minor),
+            OPTIONAL(fileMode, uid, gid));
 JSON_DEFINE(Config::Resources::Device, REQUIRED(allow),
             OPTIONAL(type, major, minor, access));
 JSON_DEFINE_OPTIONAL(Config::Resources::Memory, limit, reservation, swap,
