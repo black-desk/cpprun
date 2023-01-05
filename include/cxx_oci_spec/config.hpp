@@ -123,7 +123,7 @@ struct Config {
         struct Resources {
                 struct Device {
                         bool allow;
-                        std::optional<std::string> type;
+                        std::string type = "a";
                         std::optional<int64_t> major, minor;
                         std::optional<std::string> access;
                 };
