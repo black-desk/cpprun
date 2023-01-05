@@ -18,10 +18,7 @@ file(READ ${CMAKE_CURRENT_SOURCE_DIR}/../doc/state.md CPPRUN_STATE_DOC)
 
 configure_file(help.hpp.in help.hpp)
 
-add_executable(
-  cpprun
-  main.cpp commands.cpp reexec.cpp default_logger.cpp help.cpp
-)
+add_executable(cpprun main.cpp commands.cpp reexec.cpp default_logger.cpp help.cpp)
 target_link_libraries(
   cpprun
   blackdesk_cpplib_core blackdesk_cpplib_linux docopt

@@ -49,11 +49,7 @@ CPMAddPackage(
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(mount REQUIRED mount IMPORTED_TARGET GLOBAL)
-add_library(
-  mount ALIAS PkgConfig::mount
-)
+add_library(mount ALIAS PkgConfig::mount)
 
 pkg_check_modules(cap REQUIRED libcap IMPORTED_TARGET GLOBAL)
-add_library(
-  cap ALIAS PkgConfig::cap
-)
+add_library(cap ALIAS PkgConfig::cap)

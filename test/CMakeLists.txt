@@ -1,7 +1,4 @@
-add_executable(
-  tests
-  ./oci_spec/config_test.cpp
-)
+add_executable(tests ./oci_spec/config_test.cpp)
 
 target_link_libraries(
   tests
