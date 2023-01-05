@@ -348,6 +348,7 @@ DO_OCI_CONFIG_VERIFY_START(
         verify_rlimits(config.process->rlimits);
 
         if (config.process->apparmorProfile.has_value()) {
+                UNSUPPORTED("\"apparmorProfile\" not supported");
         }
 
         verify_capabilities(config.process->capabilities);
