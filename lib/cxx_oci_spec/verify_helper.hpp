@@ -10,10 +10,11 @@ namespace cxx_oci_spec
 
 class Verifyhelper {
     public:
-        const VerifyedConfig::Options &option;
+        using Options = VerifyedConfig::Options;
+        const Options &option;
         VerifyedConfig &config;
 
-        Verifyhelper(const VerifyedConfig::Options &opt, VerifyedConfig &cfg)
+        Verifyhelper(const Options &opt, VerifyedConfig &cfg)
                 : option(opt)
                 , config(cfg)
         {
@@ -21,38 +22,48 @@ class Verifyhelper {
 
         void verify() const;
 
-        void verify_mount(decltype(Config::mounts)::value_type::value_type const
-                                  &mount) const;
-        static void verify_rlimits(
-                decltype(Config::process->rlimits)::value_type const &rlimits);
-        static void verify_capabilities(
-                const decltype(Config::process->capabilities)::value_type
-                        &capabilities);
-        static void
-        verify_args(decltype(Config::process->args)::const_iterator args_begin,
-                    decltype(Config::process->args)::const_iterator args_end);
-        static void verify_args(decltype(Config::process->args) const &args)
+        using Mount = decltype(Config::mounts)::value_type::value_type;
+        void verify_mount(Mount const &mount) const;
+
+        using Rlimits = decltype(Config::process->rlimits)::value_type;
+        static void verify_rlimits(Rlimits const &rlimits);
+
+        using Capabilities =
+                decltype(Config::process->capabilities)::value_type;
+        static void verify_capabilities(Capabilities const &capabilities);
+
+        using Args = decltype(Config::process->args);
+        static void verify_args(Args const &args)
         {
                 verify_args(args.begin(), args.end());
         }
-        void
-        verify_env(decltype(Config::process->env)::value_type const &env) const;
-        void verify_env_key(
-                decltype(Config::process->env)::value_type::value_type const
-                        &key) const;
-        void verify_hook(decltype(Config::hooks->poststart)::value_type const
-                                 &hooks) const;
-        void verify_annotations_key(
-                decltype(Config::annotations)::value_type::key_type const &key)
-                const;
-        static void verify_allowed_device_list(
-                decltype(Config::Resources::devices)::value_type const &devices);
-        static void verify_allowed_device_list_type(
-                decltype(decltype(Config::Resources::devices)::value_type::
-                                 value_type::type) const &type);
-        static void verify_allowed_device_list_access(
-                decltype(decltype(Config::Resources::devices)::value_type::
-                                 value_type::access)::value_type const &access);
+        static void verify_args(Args::const_iterator args_begin,
+                                Args::const_iterator args_end);
+
+        using Env = decltype(Config::process->env)::value_type;
+        void verify_env(Env const &env) const;
+        using EnvKey = Env::value_type;
+        void verify_env_key(EnvKey const &key) const;
+
+        using Hooks = decltype(Config::hooks->poststart)::value_type;
+        void verify_hook(Hooks const &hooks) const;
+
+        using AnnoKey = decltype(Config::annotations)::value_type::key_type;
+        void verify_annotations_key(AnnoKey const &key) const;
+
+        using AllowedDeviceList =
+                decltype(Config::Resources::devices)::value_type;
+        static void
+        verify_allowed_device_list(AllowedDeviceList const &devices);
+
+        using AllowedDeviceType = decltype(AllowedDeviceList::value_type::type);
+        static void
+        verify_allowed_device_list_type(AllowedDeviceType const &type);
+
+        using AllowedDeviceAccess =
+                decltype(AllowedDeviceList::value_type::access)::value_type;
+        static void
+        verify_allowed_device_list_access(AllowedDeviceAccess const &access);
 
         void verify_ociVersion() const;
         void verify_root() const;

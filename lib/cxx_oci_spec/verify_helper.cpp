@@ -49,8 +49,7 @@ void Verifyhelper::verify() const
         verify_resources();
 }
 
-void Verifyhelper::verify_mount(
-        decltype(Config::mounts)::value_type::value_type const &mount) const
+void Verifyhelper::verify_mount(Mount const &mount) const
 {
         if (mount.destination.is_relative()) {
                 NESTED_EXCEPTION(
@@ -108,8 +107,7 @@ void Verifyhelper::verify_mount(
 #endif
 }
 
-void Verifyhelper::verify_rlimits(
-        decltype(Config::process->rlimits)::value_type const &rlimits)
+void Verifyhelper::verify_rlimits(Rlimits const &rlimits)
 {
         std::unordered_set<int> verified;
 
@@ -133,8 +131,7 @@ void Verifyhelper::verify_rlimits(
         }
 }
 
-void Verifyhelper::verify_capabilities(
-        const decltype(Config::process->capabilities)::value_type &capabilities)
+void Verifyhelper::verify_capabilities(Capabilities const &capabilities)
 {
 #ifdef CXX_OCI_SPEC_PRECHECK
 
@@ -157,17 +154,15 @@ void Verifyhelper::verify_capabilities(
 #endif
 }
 
-void Verifyhelper::verify_args(
-        decltype(Config::process->args)::const_iterator args_begin,
-        decltype(Config::process->args)::const_iterator args_end)
+void Verifyhelper::verify_args(Args::const_iterator args_begin,
+                               Args::const_iterator args_end)
 {
         // TODO(black_desk): implement
         (void)args_begin;
         (void)args_end;
 }
 
-void Verifyhelper::verify_env(
-        decltype(Config::process->env)::value_type const &env) const
+void Verifyhelper::verify_env(Env const &env) const
 {
         std::set<std::string> keys;
         for (const auto &key_and_value : env) {
@@ -194,8 +189,7 @@ void Verifyhelper::verify_env(
         }
 }
 
-void Verifyhelper::verify_env_key(
-        decltype(Config::process->env)::value_type::value_type const &key) const
+void Verifyhelper::verify_env_key(EnvKey const &key) const
 {
         for (const auto &character : key) {
                 if ((std::isupper(character) == 0) && character != '_' &&
@@ -212,8 +206,7 @@ void Verifyhelper::verify_env_key(
         }
 }
 
-void Verifyhelper::verify_hook(
-        decltype(Config::hooks->poststart)::value_type const &hooks) const
+void Verifyhelper::verify_hook(Hooks const &hooks) const
 {
         for (const auto &hook : hooks) {
                 if (!hook.path.is_absolute()) {
@@ -232,8 +225,7 @@ void Verifyhelper::verify_hook(
         }
 }
 
-void Verifyhelper::verify_annotations_key(
-        decltype(Config::annotations)::value_type::key_type const &key) const
+void Verifyhelper::verify_annotations_key(AnnoKey const &key) const
 {
         auto components = black_desk::cpplib::strings::split(key, '.');
 
@@ -260,8 +252,7 @@ void Verifyhelper::verify_annotations_key(
         }
 }
 
-void Verifyhelper::verify_allowed_device_list(
-        decltype(Config::Resources::devices)::value_type const &devices)
+void Verifyhelper::verify_allowed_device_list(AllowedDeviceList const &devices)
 {
         for (auto const &device : devices) {
                 try {
@@ -278,9 +269,7 @@ void Verifyhelper::verify_allowed_device_list(
         }
 }
 
-void Verifyhelper::verify_allowed_device_list_type(
-        decltype(decltype(Config::Resources::devices)::value_type::value_type::
-                         type) const &type)
+void Verifyhelper::verify_allowed_device_list_type(AllowedDeviceType const &type)
 {
         static const std::set<std::string> types{ "c", "b", "a" };
         if (types.find(type) == types.end()) {
@@ -289,8 +278,7 @@ void Verifyhelper::verify_allowed_device_list_type(
 }
 
 void Verifyhelper::verify_allowed_device_list_access(
-        decltype(decltype(Config::Resources::devices)::value_type::value_type::
-                         access)::value_type const &access)
+        AllowedDeviceAccess const &access)
 {
         static const std::set<char> accesses{ 'r', 'w', 'm' };
         for (auto const &character : access) {
