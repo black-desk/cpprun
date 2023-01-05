@@ -48,7 +48,8 @@ void Verifyhelper::verify() const
         verify_devices();
 }
 
-void Verifyhelper::verify_mount(const Config::Mount &mount) const
+void Verifyhelper::verify_mount(
+        decltype(Config::mounts)::value_type::value_type const &mount) const
 {
         if (mount.destination.is_relative()) {
                 NESTED_EXCEPTION(
@@ -106,15 +107,12 @@ void Verifyhelper::verify_mount(const Config::Mount &mount) const
 #endif
 }
 
-void Verifyhelper::verify_rlimits(decltype(Config::process->rlimits) &rlimits)
+void Verifyhelper::verify_rlimits(
+        decltype(Config::process->rlimits)::value_type const &rlimits)
 {
-        if (!rlimits.has_value()) {
-                return;
-        }
-
         std::unordered_set<int> verified;
 
-        for (const auto &rlimit : *rlimits) {
+        for (const auto &rlimit : rlimits) {
                 auto type = rlimit_string_to_int(rlimit.type);
                 if (verified.find(type) != verified.end()) {
                         NESTED_EXCEPTION(
@@ -135,18 +133,14 @@ void Verifyhelper::verify_rlimits(decltype(Config::process->rlimits) &rlimits)
 }
 
 void Verifyhelper::verify_capabilities(
-        decltype(Config::process->capabilities) &capabilities)
+        const decltype(Config::process->capabilities)::value_type &capabilities)
 {
 #ifdef CXX_OCI_SPEC_PRECHECK
 
-        if (!capabilities.has_value()) {
-                return;
-        }
-
-        static std::vector<decltype(capabilities->effective)> list = {
-                capabilities->effective,   capabilities->bounding,
-                capabilities->inheritable, capabilities->permitted,
-                capabilities->ambient,
+        static std::vector<decltype(capabilities.effective)> list = {
+                capabilities.effective,   capabilities.bounding,
+                capabilities.inheritable, capabilities.permitted,
+                capabilities.ambient,
         };
 
         for (auto const &capability : list) {
@@ -161,33 +155,18 @@ void Verifyhelper::verify_capabilities(
 
 #endif
 }
+
 void Verifyhelper::verify_args(
-        std::vector<std::string>::const_iterator args_begin,
-        std::vector<std::string>::const_iterator args_end)
+        decltype(Config::process->args)::const_iterator args_begin,
+        decltype(Config::process->args)::const_iterator args_end)
 {
         // TODO(black_desk): implement
         (void)args_begin;
         (void)args_end;
 }
 
-void Verifyhelper::verify_env_key(const std::string &key) const
-{
-        for (const auto &character : key) {
-                if ((std::isupper(character) == 0) && character != '_' &&
-                    (std::isdigit(character) == 0)) {
-                        auto msg = fmt::format(
-                                "environment varliable name should contain only upper case letters, digits, and '_', but we get '{}' in \"{}\"",
-                                character, key);
-                        if (option.stop_when_unrecommended_env_detect) {
-                                NESTED_EXCEPTION("{}", msg);
-                        } else {
-                                SPDLOG_WARN(msg);
-                        }
-                }
-        }
-}
-
-void Verifyhelper::verify_env(const std::vector<std::string> &env) const
+void Verifyhelper::verify_env(
+        decltype(Config::process->env)::value_type const &env) const
 {
         std::set<std::string> keys;
         for (const auto &key_and_value : env) {
@@ -214,9 +193,26 @@ void Verifyhelper::verify_env(const std::vector<std::string> &env) const
         }
 }
 
+void Verifyhelper::verify_env_key(
+        decltype(Config::process->env)::value_type::value_type const &key) const
+{
+        for (const auto &character : key) {
+                if ((std::isupper(character) == 0) && character != '_' &&
+                    (std::isdigit(character) == 0)) {
+                        auto msg = fmt::format(
+                                "environment varliable name should contain only upper case letters, digits, and '_', but we get '{}' in \"{}\"",
+                                character, key);
+                        if (option.stop_when_unrecommended_env_detect) {
+                                NESTED_EXCEPTION("{}", msg);
+                        } else {
+                                SPDLOG_WARN(msg);
+                        }
+                }
+        }
+}
+
 void Verifyhelper::verify_hook(
-        const std::vector<Config::Hooks::Hook> &hooks) const
-// FIXME: use decltype
+        decltype(Config::hooks->poststart)::value_type const &hooks) const
 {
         for (const auto &hook : hooks) {
                 if (!hook.path.is_absolute()) {
@@ -235,7 +231,8 @@ void Verifyhelper::verify_hook(
         }
 }
 
-void Verifyhelper::verify_annotations_key(const std::string &key) const
+void Verifyhelper::verify_annotations_key(
+        decltype(Config::annotations)::value_type::key_type const &key) const
 {
         auto components = black_desk::cpplib::strings::split(key, '.');
 
@@ -345,13 +342,17 @@ DO_OCI_CONFIG_VERIFY_START(
                 verify_env(config.process->env.value());
         }
 
-        verify_rlimits(config.process->rlimits);
+        if (config.process->rlimits.has_value()) {
+                verify_rlimits(config.process->rlimits.value());
+        }
 
         if (config.process->apparmorProfile.has_value()) {
                 UNSUPPORTED("\"apparmorProfile\" not supported");
         }
 
-        verify_capabilities(config.process->capabilities);
+        if (config.process->capabilities.has_value()) {
+                verify_capabilities(config.process->capabilities.value());
+        }
 
         if (config.process->selinuxLabel.has_value()) {
                 UNSUPPORTED("\"selinuxLabel\" not supported");

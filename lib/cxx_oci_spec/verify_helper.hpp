@@ -21,22 +21,39 @@ class Verifyhelper {
 
         void verify() const;
 
-        void verify_mount(const Config::Mount &mount) const;
-        static void verify_rlimits(decltype(Config::process->rlimits) &rlimits);
+        void verify_mount(decltype(Config::mounts)::value_type::value_type const
+                                  &mount) const;
+        static void verify_rlimits(
+                decltype(Config::process->rlimits)::value_type const &rlimits);
         static void verify_capabilities(
-                decltype(Config::process->capabilities) &capabilities);
+                const decltype(Config::process->capabilities)::value_type
+                        &capabilities);
         static void
-        verify_args(std::vector<std::string>::const_iterator args_begin,
-                    std::vector<std::string>::const_iterator args_end);
-        static void verify_args(const std::vector<std::string> &args)
+        verify_args(decltype(Config::process->args)::const_iterator args_begin,
+                    decltype(Config::process->args)::const_iterator args_end);
+        static void verify_args(decltype(Config::process->args) const &args)
         {
                 verify_args(args.begin(), args.end());
         }
-        void verify_annotations_key(const std::string &key) const;
+        void
+        verify_env(decltype(Config::process->env)::value_type const &env) const;
+        void verify_env_key(
+                decltype(Config::process->env)::value_type::value_type const
+                        &key) const;
+        void verify_hook(decltype(Config::hooks->poststart)::value_type const
+                                 &hooks) const;
+        void verify_annotations_key(
+                decltype(Config::annotations)::value_type::key_type const &key)
+                const;
+        static void verify_allowed_device_list(
+                decltype(Config::Resources::devices)::value_type const &devices);
+        static void verify_allowed_device_list_type(
+                decltype(decltype(Config::Resources::devices)::value_type::
+                                 value_type::type) const &type);
+        static void verify_allowed_device_list_access(
+                decltype(decltype(Config::Resources::devices)::value_type::
+                                 value_type::access)::value_type const &access);
 
-        void verify_env_key(const std::string &key) const;
-        void verify_env(const std::vector<std::string> &env) const;
-        void verify_hook(const std::vector<Config::Hooks::Hook> &hooks) const;
         void verify_ociVersion() const;
         void verify_root() const;
         void verify_mounts() const;
