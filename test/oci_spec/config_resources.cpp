@@ -91,3 +91,33 @@ TEST(OCIConfigResources, memory)
                 VERIFY_FAIL({});
         }
 }
+
+TEST(OCIConfigResources, cpu)
+{
+        WITH_CONFIG("minimal-for-start-config");
+        config_json["resources"] = R"({
+                "cpu": {
+                        "shares": 1024,
+                        "quota": 1000000,
+                        "period": 500000,
+                        "realtimeRuntime": 950000,
+                        "realtimePeriod": 1000000,
+                        "cpus": "2-3",
+                        "mems": "0-7",
+                        "idle": 0
+                }
+        })"_json;
+        {
+                VERIFY_PASS({});
+        }
+
+        config_json["resources"]["cpu"]["cpus"] = R"("1-4,6,11")"_json;
+        {
+                VERIFY_PASS({});
+        }
+
+        config_json["resources"]["cpu"]["cpus"] = R"("1-4,,6")"_json;
+        {
+                VERIFY_FAIL({});
+        }
+}

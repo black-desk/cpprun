@@ -306,6 +306,25 @@ void Verifyhelper::verify_memory(Memory const &memory)
         }
 }
 
+void Verifyhelper::verify_cpu(CPU const &cpu)
+{
+        // https://regex101.com/r/VVvdhU/1
+        static std::regex const regex_match_cpus(R"((?:\d+(?:-\d+)?,?)+)");
+        auto const &regex_match_mems = regex_match_cpus;
+
+        if (cpu.cpus.has_value() &&
+            !std::regex_match(cpu.cpus.value(), regex_match_cpus)) {
+                NESTED_EXCEPTION("invalid cpus [cpu: {}]", JSON(cpu));
+        }
+
+        if (cpu.mems.has_value() &&
+            !std::regex_match(cpu.mems.value(), regex_match_mems)) {
+                NESTED_EXCEPTION("invalid mems [cpu: {}]", JSON(cpu));
+        }
+
+        // TODO(black_desk): more verification
+}
+
 // NOLINTNEXTLINE
 #define DO_OCI_CONFIG_VERIFY_START(FIELD, url)         \
         void Verifyhelper::verify_##FIELD() const      \
@@ -562,6 +581,10 @@ DO_OCI_CONFIG_VERIFY_START(
 
         if (config.resources->memory.has_value()) {
                 verify_memory(config.resources->memory.value());
+        }
+
+        if (config.resources->cpu.has_value()) {
+                verify_cpu(config.resources->cpu.value());
         }
 }
 DO_OCI_CONFIG_VERIFY_END(resources);

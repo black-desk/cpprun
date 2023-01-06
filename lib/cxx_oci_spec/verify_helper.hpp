@@ -68,6 +68,9 @@ class Verifyhelper {
         using Memory = decltype(Config::Resources::memory)::value_type;
         static void verify_memory(Memory const &memory);
 
+        using CPU = decltype(Config::Resources::cpu)::value_type;
+        static void verify_cpu(CPU const &cpu);
+
         void verify_ociVersion() const;
         void verify_root() const;
         void verify_mounts() const;
