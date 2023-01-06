@@ -1,4 +1,13 @@
-add_executable(tests ./oci_spec/config_test.cpp)
+add_executable(
+  tests
+  ./oci_spec/config_basic.cpp
+  ./oci_spec/config_ociVersion.cpp
+  ./oci_spec/config_mount.cpp
+  ./oci_spec/config_example.cpp
+  ./oci_spec/config_process.cpp
+  ./oci_spec/config_resources.cpp
+  ./oci_spec/config_namespaces.cpp
+)
 
 target_link_libraries(
   tests
