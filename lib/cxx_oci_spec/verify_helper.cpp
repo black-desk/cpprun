@@ -49,282 +49,6 @@ void Verifyhelper::verify() const
         verify_resources();
 }
 
-void Verifyhelper::verify_mount(Mount const &mount) const
-{
-        if (mount.destination.is_relative()) {
-                NESTED_EXCEPTION(
-                        "\"destination\" invalid: should be absolute path [mount: {}]",
-                        JSON(mount));
-        }
-
-#ifdef CXX_OCI_SPEC_PRECHECK
-        auto mnt_ctx = std::shared_ptr<struct libmnt_context>(
-                mnt_new_context(), mount_context_deleter);
-
-        // NOTE(black_desk): libmount will dup the c-style string.
-
-        if (mount.source.has_value()) {
-                auto ret = mnt_context_set_source(mnt_ctx.get(),
-                                                  mount.source->c_str());
-                if (ret != 0) {
-                        NESTED_EXCEPTION(
-                                "\"source\" invalid: mnt_context_set_source returns {} [mount: {}]",
-                                ret, JSON(mount));
-                }
-        }
-
-        if (mount.options.has_value()) {
-                auto ret = mnt_context_append_options(
-                        mnt_ctx.get(), black_desk::cpplib::strings::join(
-                                               mount.options.value(), ",")
-                                               .c_str());
-                if (ret != 0) {
-                        NESTED_EXCEPTION(
-                                "\"options\" invalid: mnt_context_append_options returns {} [mount: {}]",
-                                ret, JSON(mount));
-                }
-        }
-
-        if (mount.type.has_value()) {
-                auto ret = mnt_context_set_fstype(mnt_ctx.get(),
-                                                  mount.type->c_str());
-                if (ret != 0) {
-                        NESTED_EXCEPTION(
-                                "\"type\" invalid: mnt_context_set_fstype returns {} [mount: {}]",
-                                ret, JSON(mount));
-                }
-        }
-
-        if (mount.uidMappings.has_value()) {
-                UNSUPPORTED("\"uidMappings\" not supported [mount: {}]",
-                            JSON(mount));
-        }
-
-        if (mount.gidMappings.has_value()) {
-                UNSUPPORTED("\"gidMappings\" not supported [mount: {}]",
-                            JSON(mount));
-        }
-#endif
-}
-
-void Verifyhelper::verify_rlimits(Rlimits const &rlimits)
-{
-        std::unordered_set<int> verified;
-
-        for (const auto &rlimit : rlimits) {
-                auto type = rlimit_string_to_int(rlimit.type);
-                if (verified.find(type) != verified.end()) {
-                        NESTED_EXCEPTION(
-                                "duplicated entries with same type \"{}\"",
-                                rlimit.type);
-                }
-                verified.insert(type);
-
-#ifdef CXX_OCI_SPEC_PRECHECK
-                black_desk::cpplib::Linux::getrlimit(type);
-                if (rlimit.soft > rlimit.hard) {
-                        NESTED_EXCEPTION(
-                                "\"soft\" should less or equal to \"hard\" [rlimit: {}]",
-                                JSON(rlimit));
-                }
-#endif
-        }
-}
-
-void Verifyhelper::verify_capabilities(Capabilities const &capabilities)
-{
-#ifdef CXX_OCI_SPEC_PRECHECK
-
-        static std::vector<decltype(capabilities.effective)> list = {
-                capabilities.effective,   capabilities.bounding,
-                capabilities.inheritable, capabilities.permitted,
-                capabilities.ambient,
-        };
-
-        for (auto const &capability : list) {
-                if (!capability.has_value()) {
-                        continue;
-                }
-
-                for (auto const &cap : *capability) {
-                        capability_string_to_int(cap);
-                }
-        }
-
-#endif
-}
-
-void Verifyhelper::verify_args(Args::const_iterator args_begin,
-                               Args::const_iterator args_end)
-{
-        // TODO(black_desk): implement
-        (void)args_begin;
-        (void)args_end;
-}
-
-void Verifyhelper::verify_env(Env const &env) const
-{
-        std::set<std::string> keys;
-        for (const auto &key_and_value : env) {
-                auto euqal_pos = key_and_value.find_first_of('=');
-                if (euqal_pos == std::string::npos) {
-                        NESTED_EXCEPTION(
-                                "entry in env should be like KEY=VALUE, but we get \"{}\"",
-                                key_and_value);
-                }
-
-                auto key = key_and_value.substr(0, euqal_pos);
-                if (keys.find(key) != keys.end()) {
-                        auto msg = fmt::format(
-                                "duplicate key \"{}\" found in environ", key);
-                        if (this->option
-                                    .stop_when_duplicate_key_found_in_environ) {
-                                NESTED_EXCEPTION("{}", msg);
-                        } else {
-                                SPDLOG_WARN(msg);
-                        }
-                }
-                keys.insert(key);
-                verify_env_key(key);
-        }
-}
-
-void Verifyhelper::verify_env_key(EnvKey const &key) const
-{
-        for (const auto &character : key) {
-                if ((std::isupper(character) == 0) && character != '_' &&
-                    (std::isdigit(character) == 0)) {
-                        auto msg = fmt::format(
-                                "environment varliable name should contain only upper case letters, digits, and '_', but we get '{}' in \"{}\"",
-                                character, key);
-                        if (option.stop_when_unrecommended_env_detect) {
-                                NESTED_EXCEPTION("{}", msg);
-                        } else {
-                                SPDLOG_WARN(msg);
-                        }
-                }
-        }
-}
-
-void Verifyhelper::verify_hook(Hooks const &hooks) const
-{
-        for (const auto &hook : hooks) {
-                if (!hook.path.is_absolute()) {
-                        NESTED_EXCEPTION(
-                                "\"hooks\" invalid: \"path\" should be absolute [hook: {}]",
-                                JSON(hook));
-                }
-
-                if (hook.args.has_value()) {
-                        verify_args(hook.args.value());
-                }
-
-                if (hook.env.has_value()) {
-                        verify_env(hook.env.value());
-                }
-        }
-}
-
-void Verifyhelper::verify_annotations_key(AnnoKey const &key) const
-{
-        auto components = black_desk::cpplib::strings::split(key, '.');
-
-        std::reverse(components.begin(), components.end());
-
-        auto reversed = black_desk::cpplib::strings::join(components, '.');
-
-        // https://regexr.com/3au3g
-        static std::regex regex_match_domain(
-                R"((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9])");
-
-        if (std::regex_match(reversed, regex_match_domain)) {
-                return;
-        }
-
-        auto msg = fmt::format(
-                "Keys in annotations should be named using a reverse domain notation, but we get \"{}\"",
-                key);
-
-        if (option.stop_when_unrecommended_keyname_in_annotations_detected) {
-                NESTED_EXCEPTION("{}", msg);
-        } else {
-                SPDLOG_WARN(msg);
-        }
-}
-
-void Verifyhelper::verify_allowed_device_list(AllowedDeviceList const &devices)
-{
-        for (auto const &device : devices) {
-                try {
-                        verify_allowed_device_list_type(device.type);
-
-                        if (device.access.has_value()) {
-                                verify_allowed_device_list_access(
-                                        device.access.value());
-                        }
-
-                } catch (const std::exception &e) {
-                        NESTED_EXCEPTION("invalid device [{}]", JSON(device));
-                }
-        }
-}
-
-void Verifyhelper::verify_allowed_device_list_type(AllowedDeviceType const &type)
-{
-        static const std::set<std::string> types{ "c", "b", "a" };
-        if (types.find(type) == types.end()) {
-                NESTED_EXCEPTION("invalid type");
-        }
-}
-
-void Verifyhelper::verify_allowed_device_list_access(
-        AllowedDeviceAccess const &access)
-{
-        static const std::set<char> accesses{ 'r', 'w', 'm' };
-        for (auto const &character : access) {
-                if (accesses.find(character) == accesses.end() ||
-                    std::count(access.begin(), access.end(), character) != 1) {
-                        NESTED_EXCEPTION("invalid access");
-                }
-        }
-}
-
-void Verifyhelper::verify_memory(Memory const &memory)
-{
-        auto limits = std::vector<decltype(Memory::limit)::value_type>{
-                memory.limit.value_or(-1),     memory.reservation.value_or(-1),
-                memory.swap.value_or(-1),      memory.kernel.value_or(-1),
-                memory.kernelTCP.value_or(-1),
-        };
-
-        for (auto const &limit : limits) {
-                if (limit < -1) {
-                        NESTED_EXCEPTION(
-                                "invalid memory limit value, should be greater than -1 [memory: {}]",
-                                JSON(memory))
-                }
-        }
-}
-
-void Verifyhelper::verify_cpu(CPU const &cpu)
-{
-        // https://regex101.com/r/VVvdhU/1
-        static std::regex const regex_match_cpus(R"((?:\d+(?:-\d+)?,?)+)");
-        auto const &regex_match_mems = regex_match_cpus;
-
-        if (cpu.cpus.has_value() &&
-            !std::regex_match(cpu.cpus.value(), regex_match_cpus)) {
-                NESTED_EXCEPTION("invalid cpus [cpu: {}]", JSON(cpu));
-        }
-
-        if (cpu.mems.has_value() &&
-            !std::regex_match(cpu.mems.value(), regex_match_mems)) {
-                NESTED_EXCEPTION("invalid mems [cpu: {}]", JSON(cpu));
-        }
-
-        // TODO(black_desk): more verification
-}
-
 // NOLINTNEXTLINE
 #define DO_OCI_CONFIG_VERIFY_START(FIELD, url)         \
         void Verifyhelper::verify_##FIELD() const      \
@@ -386,6 +110,64 @@ DO_OCI_CONFIG_VERIFY_START(
 }
 DO_OCI_CONFIG_VERIFY_END(mounts);
 
+void Verifyhelper::verify_mount(Mount const &mount) const
+{
+        if (mount.destination.is_relative()) {
+                NESTED_EXCEPTION(
+                        "\"destination\" invalid: should be absolute path [mount: {}]",
+                        JSON(mount));
+        }
+
+#ifdef CXX_OCI_SPEC_PRECHECK
+        auto mnt_ctx = std::shared_ptr<struct libmnt_context>(
+                mnt_new_context(), mount_context_deleter);
+
+        // NOTE(black_desk): libmount will dup the c-style string.
+
+        if (mount.source.has_value()) {
+                auto ret = mnt_context_set_source(mnt_ctx.get(),
+                                                  mount.source->c_str());
+                if (ret != 0) {
+                        NESTED_EXCEPTION(
+                                "\"source\" invalid: mnt_context_set_source returns {} [mount: {}]",
+                                ret, JSON(mount));
+                }
+        }
+
+        if (mount.options.has_value()) {
+                auto ret = mnt_context_append_options(
+                        mnt_ctx.get(), black_desk::cpplib::strings::join(
+                                               mount.options.value(), ",")
+                                               .c_str());
+                if (ret != 0) {
+                        NESTED_EXCEPTION(
+                                "\"options\" invalid: mnt_context_append_options returns {} [mount: {}]",
+                                ret, JSON(mount));
+                }
+        }
+
+        if (mount.type.has_value()) {
+                auto ret = mnt_context_set_fstype(mnt_ctx.get(),
+                                                  mount.type->c_str());
+                if (ret != 0) {
+                        NESTED_EXCEPTION(
+                                "\"type\" invalid: mnt_context_set_fstype returns {} [mount: {}]",
+                                ret, JSON(mount));
+                }
+        }
+
+        if (mount.uidMappings.has_value()) {
+                UNSUPPORTED("\"uidMappings\" not supported [mount: {}]",
+                            JSON(mount));
+        }
+
+        if (mount.gidMappings.has_value()) {
+                UNSUPPORTED("\"gidMappings\" not supported [mount: {}]",
+                            JSON(mount));
+        }
+#endif
+}
+
 DO_OCI_CONFIG_VERIFY_START(
         process,
         "https://github.com/opencontainers/runtime-spec/blob/main/config.md#process");
@@ -425,6 +207,105 @@ DO_OCI_CONFIG_VERIFY_START(
         }
 }
 DO_OCI_CONFIG_VERIFY_END(process);
+
+void Verifyhelper::verify_args(Args::const_iterator args_begin,
+                               Args::const_iterator args_end)
+{
+        // TODO(black_desk): implement
+        (void)args_begin;
+        (void)args_end;
+}
+
+void Verifyhelper::verify_env(Env const &env) const
+{
+        std::set<std::string> keys;
+        for (const auto &key_and_value : env) {
+                auto euqal_pos = key_and_value.find_first_of('=');
+                if (euqal_pos == std::string::npos) {
+                        NESTED_EXCEPTION(
+                                "entry in env should be like KEY=VALUE, but we get \"{}\"",
+                                key_and_value);
+                }
+
+                auto key = key_and_value.substr(0, euqal_pos);
+                if (keys.find(key) != keys.end()) {
+                        auto msg = fmt::format(
+                                "duplicate key \"{}\" found in environ", key);
+                        if (this->option
+                                    .stop_when_duplicate_key_found_in_environ) {
+                                NESTED_EXCEPTION("{}", msg);
+                        } else {
+                                SPDLOG_WARN(msg);
+                        }
+                }
+                keys.insert(key);
+                verify_env_key(key);
+        }
+}
+
+void Verifyhelper::verify_env_key(EnvKey const &key) const
+{
+        for (const auto &character : key) {
+                if ((std::isupper(character) == 0) && character != '_' &&
+                    (std::isdigit(character) == 0)) {
+                        auto msg = fmt::format(
+                                "environment varliable name should contain only upper case letters, digits, and '_', but we get '{}' in \"{}\"",
+                                character, key);
+                        if (option.stop_when_unrecommended_env_detect) {
+                                NESTED_EXCEPTION("{}", msg);
+                        } else {
+                                SPDLOG_WARN(msg);
+                        }
+                }
+        }
+}
+
+void Verifyhelper::verify_rlimits(Rlimits const &rlimits)
+{
+        std::unordered_set<int> verified;
+
+        for (const auto &rlimit : rlimits) {
+                auto type = rlimit_string_to_int(rlimit.type);
+                if (verified.find(type) != verified.end()) {
+                        NESTED_EXCEPTION(
+                                "duplicated entries with same type \"{}\"",
+                                rlimit.type);
+                }
+                verified.insert(type);
+
+#ifdef CXX_OCI_SPEC_PRECHECK
+                black_desk::cpplib::Linux::getrlimit(type);
+                if (rlimit.soft > rlimit.hard) {
+                        NESTED_EXCEPTION(
+                                "\"soft\" should less or equal to \"hard\" [rlimit: {}]",
+                                JSON(rlimit));
+                }
+#endif
+        }
+}
+
+void Verifyhelper::verify_capabilities(Capabilities const &capabilities)
+{
+#ifdef CXX_OCI_SPEC_PRECHECK
+
+        static std::vector<decltype(capabilities.effective)> list = {
+                capabilities.effective,   capabilities.bounding,
+                capabilities.inheritable, capabilities.permitted,
+                capabilities.ambient,
+        };
+
+        for (auto const &capability : list) {
+                if (!capability.has_value()) {
+                        continue;
+                }
+
+                for (auto const &cap : *capability) {
+                        capability_string_to_int(cap);
+                }
+        }
+
+#endif
+}
 
 DO_OCI_CONFIG_VERIFY_START(
         hostname,
@@ -487,6 +368,25 @@ DO_OCI_CONFIG_VERIFY_START(
 }
 DO_OCI_CONFIG_VERIFY_END(hooks);
 
+void Verifyhelper::verify_hook(Hooks const &hooks) const
+{
+        for (const auto &hook : hooks) {
+                if (!hook.path.is_absolute()) {
+                        NESTED_EXCEPTION(
+                                "\"hooks\" invalid: \"path\" should be absolute [hook: {}]",
+                                JSON(hook));
+                }
+
+                if (hook.args.has_value()) {
+                        verify_args(hook.args.value());
+                }
+
+                if (hook.env.has_value()) {
+                        verify_env(hook.env.value());
+                }
+        }
+}
+
 DO_OCI_CONFIG_VERIFY_START(
         annotations,
         "https://github.com/opencontainers/runtime-spec/blob/main/config.md#annotations");
@@ -500,6 +400,33 @@ DO_OCI_CONFIG_VERIFY_START(
         }
 }
 DO_OCI_CONFIG_VERIFY_END(hooks);
+
+void Verifyhelper::verify_annotations_key(AnnoKey const &key) const
+{
+        auto components = black_desk::cpplib::strings::split(key, '.');
+
+        std::reverse(components.begin(), components.end());
+
+        auto reversed = black_desk::cpplib::strings::join(components, '.');
+
+        // https://regexr.com/3au3g
+        static std::regex regex_match_domain(
+                R"((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9])");
+
+        if (std::regex_match(reversed, regex_match_domain)) {
+                return;
+        }
+
+        auto msg = fmt::format(
+                "Keys in annotations should be named using a reverse domain notation, but we get \"{}\"",
+                key);
+
+        if (option.stop_when_unrecommended_keyname_in_annotations_detected) {
+                NESTED_EXCEPTION("{}", msg);
+        } else {
+                SPDLOG_WARN(msg);
+        }
+}
 
 DO_OCI_CONFIG_VERIFY_START(
         namespaces,
@@ -588,6 +515,79 @@ DO_OCI_CONFIG_VERIFY_START(
         }
 }
 DO_OCI_CONFIG_VERIFY_END(resources);
+
+void Verifyhelper::verify_allowed_device_list(AllowedDeviceList const &devices)
+{
+        for (auto const &device : devices) {
+                try {
+                        verify_allowed_device_list_type(device.type);
+
+                        if (device.access.has_value()) {
+                                verify_allowed_device_list_access(
+                                        device.access.value());
+                        }
+
+                } catch (const std::exception &e) {
+                        NESTED_EXCEPTION("invalid device [{}]", JSON(device));
+                }
+        }
+}
+
+void Verifyhelper::verify_allowed_device_list_type(AllowedDeviceType const &type)
+{
+        static const std::set<std::string> types{ "c", "b", "a" };
+        if (types.find(type) == types.end()) {
+                NESTED_EXCEPTION("invalid type");
+        }
+}
+
+void Verifyhelper::verify_allowed_device_list_access(
+        AllowedDeviceAccess const &access)
+{
+        static const std::set<char> accesses{ 'r', 'w', 'm' };
+        for (auto const &character : access) {
+                if (accesses.find(character) == accesses.end() ||
+                    std::count(access.begin(), access.end(), character) != 1) {
+                        NESTED_EXCEPTION("invalid access");
+                }
+        }
+}
+
+void Verifyhelper::verify_memory(Memory const &memory)
+{
+        auto limits = std::vector<decltype(Memory::limit)::value_type>{
+                memory.limit.value_or(-1),     memory.reservation.value_or(-1),
+                memory.swap.value_or(-1),      memory.kernel.value_or(-1),
+                memory.kernelTCP.value_or(-1),
+        };
+
+        for (auto const &limit : limits) {
+                if (limit < -1) {
+                        NESTED_EXCEPTION(
+                                "invalid memory limit value, should be greater than -1 [memory: {}]",
+                                JSON(memory))
+                }
+        }
+}
+
+void Verifyhelper::verify_cpu(CPU const &cpu)
+{
+        // https://regex101.com/r/VVvdhU/1
+        static std::regex const regex_match_cpus(R"((?:\d+(?:-\d+)?,?)+)");
+        auto const &regex_match_mems = regex_match_cpus;
+
+        if (cpu.cpus.has_value() &&
+            !std::regex_match(cpu.cpus.value(), regex_match_cpus)) {
+                NESTED_EXCEPTION("invalid cpus [cpu: {}]", JSON(cpu));
+        }
+
+        if (cpu.mems.has_value() &&
+            !std::regex_match(cpu.mems.value(), regex_match_mems)) {
+                NESTED_EXCEPTION("invalid mems [cpu: {}]", JSON(cpu));
+        }
+
+        // TODO(black_desk): more verification
+}
 
 #undef DO_OCI_CONFIG_VERIFY_START
 #undef DO_OCI_CONFIG_VERIFY_END
