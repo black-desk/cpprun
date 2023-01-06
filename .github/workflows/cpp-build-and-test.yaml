@@ -8,12 +8,15 @@ jobs:
     steps:
 
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        submodules: recursive
 
     - name: Lint cmake-format
       run: |
         sudo apt install -y pip &&
         pip install --user cmake-format &&
-        find . \( -name '*.cmake' -o -name 'CMakeLists.txt' \) -exec cmake-format --config-files .cmake-format --check "$@" {} +
+        find . \( -name '*.cmake' -o -name 'CMakeLists.txt' \) -exec cmake-format --check "$@" {} +
 
     - name: Lint clang-format
       uses: DoozyX/clang-format-lint-action@v0.14
@@ -26,9 +29,11 @@ jobs:
     steps:
 
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
 
     - name: Install clang-tidy
-      run: sudo apt-get install -y clang-tidy
+      run: sudo apt-get install -y clang-tidy libcap-dev
 
     - name: Build "Debug" and test using g++
       run: |
@@ -43,9 +48,11 @@ jobs:
     steps:
 
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
 
     - name: Install clang and clang-tidy
-      run: sudo apt-get install -y clang-tidy clang
+      run: sudo apt-get install -y clang-tidy clang libcap-dev
 
     - name: Build "Debug" and test using clang++
       run: |
