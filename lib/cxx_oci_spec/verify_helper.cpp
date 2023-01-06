@@ -289,6 +289,23 @@ void Verifyhelper::verify_allowed_device_list_access(
         }
 }
 
+void Verifyhelper::verify_memory(Memory const &memory)
+{
+        auto limits = std::vector<decltype(Memory::limit)::value_type>{
+                memory.limit.value_or(-1),     memory.reservation.value_or(-1),
+                memory.swap.value_or(-1),      memory.kernel.value_or(-1),
+                memory.kernelTCP.value_or(-1),
+        };
+
+        for (auto const &limit : limits) {
+                if (limit < -1) {
+                        NESTED_EXCEPTION(
+                                "invalid memory limit value, should be greater than -1 [memory: {}]",
+                                JSON(memory))
+                }
+        }
+}
+
 // NOLINTNEXTLINE
 #define DO_OCI_CONFIG_VERIFY_START(FIELD, url)         \
         void Verifyhelper::verify_##FIELD() const      \
@@ -541,6 +558,10 @@ DO_OCI_CONFIG_VERIFY_START(
 
         if (config.resources->devices.has_value()) {
                 verify_allowed_device_list(config.resources->devices.value());
+        }
+
+        if (config.resources->memory.has_value()) {
+                verify_memory(config.resources->memory.value());
         }
 }
 DO_OCI_CONFIG_VERIFY_END(resources);

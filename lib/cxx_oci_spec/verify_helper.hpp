@@ -65,6 +65,9 @@ class Verifyhelper {
         static void
         verify_allowed_device_list_access(AllowedDeviceAccess const &access);
 
+        using Memory = decltype(Config::Resources::memory)::value_type;
+        static void verify_memory(Memory const &memory);
+
         void verify_ociVersion() const;
         void verify_root() const;
         void verify_mounts() const;

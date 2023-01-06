@@ -1,6 +1,6 @@
 #include "config_test.hpp"
 
-TEST(OCIConfig, resources)
+TEST(OCIConfigResources, devices)
 {
         WITH_CONFIG("minimal-for-start-config");
         config_json["resources"] = R"({
@@ -60,6 +60,32 @@ TEST(OCIConfig, resources)
                                 "type": "B"
                         }
                 ]
+        })"_json;
+        {
+                VERIFY_FAIL({});
+        }
+}
+
+TEST(OCIConfigResources, memory)
+{
+        WITH_CONFIG("minimal-for-start-config");
+        config_json["resources"] = R"({
+                "memory": {
+                        "limit": -1
+                }
+        })"_json;
+        {
+                VERIFY_PASS({});
+                ASSERT_EQ(config.resources.has_value() &&
+                                  config.resources->memory.has_value(),
+                          true);
+                ASSERT_EQ(config.resources->memory->limit, -1);
+        }
+
+        config_json["resources"] = R"({
+                "memory": {
+                        "limit": -2
+                }
         })"_json;
         {
                 VERIFY_FAIL({});
